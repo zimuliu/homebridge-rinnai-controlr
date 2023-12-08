@@ -5,13 +5,22 @@ import {
     API_KEY_RECIRCULATION_DURATION,
     API_KEY_SET_PRIORITY_STATUS, API_KEY_SET_RECIRCULATION_ENABLED,
     API_KEY_SET_TEMPERATURE,
+    API_KEY_DO_MAINTENANCE_RETRIEVAL,
     API_VALUE_TRUE,
     MANUFACTURER,
     SET_STATE_WAIT_TIME_MILLIS,
-    TemperatureUnits, THERMOSTAT_STEP_VALUE,
-    WATER_HEATER_STEP_VALUE_IN_F,
+    TemperatureUnits, THERMOSTAT_TARGET_TEMP_STEP_VALUE,
+    WATER_HEATER_SMALL_STEP_VALUE_IN_F,
+    THERMOSTAT_CURRENT_TEMP_MAX_VALUE,
+    THERMOSTAT_CURRENT_TEMP_MIN_VALUE,
     UNKNOWN,
+    ACCESSARY_INFO_UPDATE_THROTTLE_MILLIS,
+    API_VALUE_FALSE,
+    THERMOSTAT_CURRENT_TEMP_STEP_VALUE,
+    WATER_HEATER_BIG_STEP_START_IN_F,
+    WATER_HEATER_BIG_STEP_VALUE_IN_F,
 } from './constants';
+import _ from 'lodash';
 import {celsiusToFahrenheit, fahrenheitToCelsius} from './util';
 
 const RECIRC_SERVICE_NAME = 'Recirculation';
@@ -23,16 +32,19 @@ const RECIRC_SERVICE_NAME = 'Recirculation';
  */
 export class RinnaiControlrPlatformAccessory {
     private service: Service;
+    // Controller unit
     private readonly isFahrenheit: boolean;
-    private readonly minValue: number; // in C
-    private readonly maxValue: number; // in C
-    private targetTemperature: number; // in C
+    // All values below are in C as required by HomeKit
+    private readonly minValue: number;
+    private readonly maxValue: number;
+    private targetTemperature!: number;
+    private outletTemperature!: number;
+    private isRunning!: boolean;
 
     constructor(
         private readonly platform: RinnaiControlrHomebridgePlatform,
         private readonly accessory: PlatformAccessory,
     ) {
-        this.platform.log.debug(`Setting accessory details for device: ${JSON.stringify(this.accessory.context, null, 2)}`);
         this.isFahrenheit = this.platform.getConfig().temperatureUnits === TemperatureUnits.F;
 
         this.minValue = this.platform.getConfig().minimumTemperature;
@@ -42,15 +54,11 @@ export class RinnaiControlrPlatformAccessory {
             this.maxValue = fahrenheitToCelsius(this.maxValue);
         }
 
-        this.minValue = Math.floor(this.minValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
-        this.maxValue = Math.ceil(this.maxValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
+        this.minValue = Math.floor(this.minValue / THERMOSTAT_TARGET_TEMP_STEP_VALUE) * THERMOSTAT_TARGET_TEMP_STEP_VALUE;
+        this.maxValue = Math.ceil(this.maxValue / THERMOSTAT_TARGET_TEMP_STEP_VALUE) * THERMOSTAT_TARGET_TEMP_STEP_VALUE;
+        this.platform.log.debug(`Target Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}`);
 
-        this.targetTemperature = this.isFahrenheit && this.accessory.context.info?.domestic_temperature
-            ? fahrenheitToCelsius(this.accessory.context.info.domestic_temperature)
-            : this.accessory.context.info.domestic_temperature;
-
-        this.platform.log.info(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
-            `target temperature: ${this.targetTemperature}`);
+        this.extractDeviceInfo();
 
         // set accessory information
         this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -67,6 +75,29 @@ export class RinnaiControlrPlatformAccessory {
         this.bindStaticValues();
     }
 
+    extractDeviceInfo() {
+        this.platform.log.debug(`Setting accessory details from device payload: ${JSON.stringify(this.accessory.context, null, 2)}`);
+
+        if (this.accessory.context.info) {
+            this.targetTemperature = this.isFahrenheit && this.accessory.context.info.domestic_temperature
+                ? fahrenheitToCelsius(this.accessory.context.info.domestic_temperature)
+                : this.accessory.context.info.domestic_temperature;
+
+            this.outletTemperature = this.isFahrenheit && this.accessory.context.info.m02_outlet_temperature
+                ? fahrenheitToCelsius(this.accessory.context.info.m02_outlet_temperature)
+                : this.accessory.context.info.m02_outlet_temperature;
+
+            this.isRunning = this.accessory.context.info.domestic_combustion == API_VALUE_TRUE;
+        } else {
+            this.platform.log.error(`Cannot extract details from ${JSON.stringify(this.accessory.context, null, 2)}`);
+        }
+
+        this.platform.log.debug(`Extracted device info: ` +
+            `target temperature = ${this.targetTemperature}, ` +
+            `outlet temperature = ${this.outletTemperature}, ` +
+            `is running = ${this.isRunning}`);
+    }
+
     bindTemperature() {
         this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature)
             .onSet(this.setTargetTemperature.bind(this))
@@ -74,17 +105,17 @@ export class RinnaiControlrPlatformAccessory {
             .setProps({
                 minValue: this.minValue,
                 maxValue: this.maxValue,
-                minStep: THERMOSTAT_STEP_VALUE,
+                minStep: THERMOSTAT_TARGET_TEMP_STEP_VALUE,
             })
             .updateValue(this.targetTemperature);
 
         this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
-            .onGet(this.getTargetTemperature.bind(this))
-            .updateValue(this.targetTemperature)
+            .onGet(this.getOutletTemperature.bind(this))
+            .updateValue(this.outletTemperature)
             .setProps({
-                minValue: this.minValue,
-                maxValue: this.maxValue,
-                minStep: THERMOSTAT_STEP_VALUE,
+                minValue: THERMOSTAT_CURRENT_TEMP_MIN_VALUE,
+                maxValue: THERMOSTAT_CURRENT_TEMP_MAX_VALUE,
+                minStep: THERMOSTAT_CURRENT_TEMP_STEP_VALUE,
             });
 
         this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState)
@@ -94,10 +125,20 @@ export class RinnaiControlrPlatformAccessory {
                 maxValue: this.platform.Characteristic.TargetHeatingCoolingState.HEAT,
                 validValues: [this.platform.Characteristic.TargetHeatingCoolingState.HEAT],
             });
+
+        this.service.getCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState)
+            .onGet(this.getIsRunning.bind(this))
+            .updateValue(this.isRunning ? this.platform.Characteristic.CurrentHeatingCoolingState.HEAT : this.platform.Characteristic.CurrentHeatingCoolingState.OFF)
+            .setProps({
+                minValue: this.platform.Characteristic.CurrentHeatingCoolingState.OFF,
+                maxValue: this.platform.Characteristic.CurrentHeatingCoolingState.HEAT,
+                validValues: [this.platform.Characteristic.CurrentHeatingCoolingState.OFF, this.platform.Characteristic.CurrentHeatingCoolingState.HEAT],
+            });
     }
 
     bindRecirculation() {
-        if (this.accessory.context.info?.recirculation_capable === API_VALUE_TRUE) {
+        if (this.accessory.context.info?.recirculation_capable === API_VALUE_TRUE &&
+            this.accessory.context.shadow?.recirculation_not_configured === API_VALUE_FALSE) {
             this.platform.log.debug(`Device ${this.accessory.context.id} has recirculation capabilities. Adding service.`);
             const recircService = this.accessory.getService(RECIRC_SERVICE_NAME) ||
                 this.accessory.addService(this.platform.Service.Switch, RECIRC_SERVICE_NAME, `${this.accessory.context.id}-Recirculation`);
@@ -106,7 +147,7 @@ export class RinnaiControlrPlatformAccessory {
             recircService.updateCharacteristic(this.platform.Characteristic.On,
                 this.accessory.context.shadow.recirculation_enabled);
         } else {
-            this.platform.log.debug(`Device ${this.accessory.context.id} does not support recirculation.`);
+            this.platform.log.debug(`Device ${this.accessory.context.id} does not support recirculation or has not be configured for recirculation.`);
         }
     }
 
@@ -115,8 +156,6 @@ export class RinnaiControlrPlatformAccessory {
             this.platform.getConfig().temperatureUnits === TemperatureUnits.F
                 ? this.platform.Characteristic.TemperatureDisplayUnits.FAHRENHEIT
                 : this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS);
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState,
-            this.platform.Characteristic.CurrentHeatingCoolingState.HEAT);
     }
 
     async setRecirculateActive(value: CharacteristicValue) {
@@ -132,14 +171,41 @@ export class RinnaiControlrPlatformAccessory {
         await this.platform.setState(this.accessory, state);
     }
 
+    async retrieveMaintenanceInfo() {
+        const state: Record<string, string | number | boolean> = {
+            [API_KEY_DO_MAINTENANCE_RETRIEVAL]: true,
+        };
+
+        await this.platform.setState(this.accessory, state);
+    }
+
+    public throttledRetrieveMaintenanceInfo = _.throttle(async () => {
+        await this.retrieveMaintenanceInfo();
+    }, ACCESSARY_INFO_UPDATE_THROTTLE_MILLIS);
+
+    accessoryToControllerTemperature(value: number): number {
+        let convertedValue: number = this.isFahrenheit ? celsiusToFahrenheit(value) : value;
+        if (this.isFahrenheit) {
+            if (convertedValue >=  WATER_HEATER_BIG_STEP_START_IN_F) {
+                convertedValue = Math.round(celsiusToFahrenheit(convertedValue) / WATER_HEATER_SMALL_STEP_VALUE_IN_F) * WATER_HEATER_SMALL_STEP_VALUE_IN_F
+            } else {
+                convertedValue = Math.round(celsiusToFahrenheit(convertedValue) / WATER_HEATER_BIG_STEP_VALUE_IN_F) * WATER_HEATER_BIG_STEP_VALUE_IN_F
+            }
+        } else {
+            convertedValue = Math.round(convertedValue);
+        }
+
+        convertedValue = Math.max(this.platform.getConfig().minimumTemperature as number, convertedValue);
+        convertedValue = Math.min(this.platform.getConfig().maximumTemperature as number, convertedValue);
+
+        return convertedValue;
+    }
+
     async setTargetTemperature(value: CharacteristicValue) {
-        this.platform.log.info(`setTemperature to ${value} for device ${this.accessory.context.id}`);
+        this.platform.log.info(`setTemperature to ${value} C for device ${this.accessory.context.id}`);
 
-        const convertedValue: number = this.isFahrenheit
-            ? Math.round(celsiusToFahrenheit(value as number) / WATER_HEATER_STEP_VALUE_IN_F) * WATER_HEATER_STEP_VALUE_IN_F
-            : value as number;
-
-        this.platform.log.info(`Sending converted/rounded temperature: ${convertedValue}`);
+        const convertedValue = this.accessoryToControllerTemperature(value as number);
+        this.platform.log.info(`Sending converted/rounded temperature: ${convertedValue} ${this.platform.getConfig().temperatureUnits}`);
 
         const state: Record<string, string | number | boolean> = {
             [API_KEY_SET_PRIORITY_STATUS]: true,
@@ -147,14 +213,34 @@ export class RinnaiControlrPlatformAccessory {
         };
 
         await this.platform.setState(this.accessory, state);
+
         setTimeout(() => {
             this.platform.throttledPoll();
         }, SET_STATE_WAIT_TIME_MILLIS);
+
         this.targetTemperature = this.isFahrenheit ? fahrenheitToCelsius(convertedValue) : convertedValue;
     }
 
     async getTargetTemperature(): Promise<Nullable<CharacteristicValue>> {
-        this.platform.throttledPoll();
+        await this.platform.throttledPoll();
+        this.extractDeviceInfo();
+
         return this.targetTemperature;
+    }
+
+    async getOutletTemperature(): Promise<Nullable<CharacteristicValue>> {
+        await this.throttledRetrieveMaintenanceInfo()
+
+        await this.platform.throttledPoll();
+        this.extractDeviceInfo();
+
+        return this.outletTemperature;
+    }
+
+    async getIsRunning(): Promise<Nullable<CharacteristicValue>> {
+        await this.platform.throttledPoll();
+        this.extractDeviceInfo();
+
+        return this.isRunning;
     }
 }

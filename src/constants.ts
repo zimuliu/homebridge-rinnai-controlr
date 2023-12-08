@@ -259,11 +259,14 @@ export const API_KEY_SET_PRIORITY_STATUS = 'set_priority_status';
 export const API_KEY_RECIRCULATION_DURATION = 'recirculation_duration';
 export const API_KEY_SET_RECIRCULATION_ENABLED = 'set_recirculation_enabled';
 export const API_KEY_SET_TEMPERATURE = 'set_domestic_temperature';
+export const API_KEY_DO_MAINTENANCE_RETRIEVAL = 'do_maintenance_retrieval';
 export const API_VALUE_TRUE = 'true';
 export const API_VALUE_FALSE = 'false';
 
 export const API_POLL_THROTTLE_MILLIS = 1000;
 export const SET_STATE_WAIT_TIME_MILLIS = 5000;
+
+export const ACCESSARY_INFO_UPDATE_THROTTLE_MILLIS = 30000;
 
 export const MANUFACTURER = 'Rinnai';
 export const UNKNOWN = 'Unknown';
@@ -273,8 +276,20 @@ export enum TemperatureUnits {
     F = 'F',
 }
 
-export const THERMOSTAT_STEP_VALUE = 0.5; // in C, as HomeKit uses this unit for accessories
-export const WATER_HEATER_STEP_VALUE_IN_F = 2; // Controllers with the imperial unit, use 98/100/102/etc
+// All numbers below use metric units (C), as required by HomeKit APIs
+export const THERMOSTAT_TARGET_TEMP_STEP_VALUE = 1;
+
+export const THERMOSTAT_CURRENT_TEMP_STEP_VALUE = 0.5;
+export const THERMOSTAT_CURRENT_TEMP_MAX_VALUE = 65; // 60C for residential water heater based on the manual, adding 5 as buffer
+export const THERMOSTAT_CURRENT_TEMP_MIN_VALUE = 0; // 0C, frozen pipe...
+
+/**
+ * For water heater controllers with the imperial unit,
+ * the steps are 98/100/102/.../108/110/105/110/115/120/...
+ */
+export const WATER_HEATER_SMALL_STEP_VALUE_IN_F = 2;
+export const WATER_HEATER_BIG_STEP_START_IN_F = 110;
+export const WATER_HEATER_BIG_STEP_VALUE_IN_F = 5;
 
 // Increment only for breaking service changes to remove and re-add devices
 export const PREVIOUS_UUID_SUFFICES = ['-1'];
