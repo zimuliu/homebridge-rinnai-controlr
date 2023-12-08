@@ -55,8 +55,8 @@ export class RinnaiControlrPlatformAccessory {
             ? fahrenheitToCelsius(this.device.info.domestic_temperature)
             : this.device.info.domestic_temperature;
 
-        this.outletTemperature = this.isFahrenheit && this.device.info?.m02_outlet_temperature
-            ? fahrenheitToCelsius(this.device.info.m02_outlet_temperature)
+        this.outletTemperature = this.isFahrenheit && this.device.info?.m11_heat_exchanger_outlet_temperature
+            ? fahrenheitToCelsius(this.device.info.m11_heat_exchanger_outlet_temperature)
             : this.device.info.m02_outlet_temperature;
 
         this.platform.log.debug(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
