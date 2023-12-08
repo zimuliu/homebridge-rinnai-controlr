@@ -93,8 +93,8 @@ export class RinnaiControlrPlatformAccessory {
             .onGet(this.getOutletTemperature.bind(this))
             .updateValue(this.outletTemperature)
             .setProps({
-                minValue: this.minValue,
-                maxValue: this.maxValue,
+                minValue: 10,
+                maxValue: 60,
                 minStep: THERMOSTAT_STEP_VALUE,
             });
 
