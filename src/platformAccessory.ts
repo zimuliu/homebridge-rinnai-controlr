@@ -9,6 +9,7 @@ import {
     MANUFACTURER,
     SET_STATE_WAIT_TIME_MILLIS,
     TemperatureUnits, THERMOSTAT_STEP_VALUE,
+    WATER_HEATER_STEP_VALUE_IN_F,
     UNKNOWN,
 } from './constants';
 import {celsiusToFahrenheit, fahrenheitToCelsius} from './util';
@@ -25,9 +26,9 @@ export class RinnaiControlrPlatformAccessory {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private device: any;
     private readonly isFahrenheit: boolean;
-    private readonly minValue: number;
-    private readonly maxValue: number;
-    private temperature: number;
+    private readonly minValue: number; // in C
+    private readonly maxValue: number; // in C
+    private temperature: number; // in C
 
     constructor(
         private readonly platform: RinnaiControlrHomebridgePlatform,
@@ -137,7 +138,7 @@ export class RinnaiControlrPlatformAccessory {
         this.platform.log.info(`setTemperature to ${value} for device ${this.device.dsn}`);
 
         const convertedValue: number = this.isFahrenheit
-            ? Math.round(celsiusToFahrenheit(value as number) / 5) * 5 // Round to nearest 5
+            ? Math.round(celsiusToFahrenheit(value as number) / WATER_HEATER_STEP_VALUE_IN_F) * WATER_HEATER_STEP_VALUE_IN_F
             : value as number;
 
         this.platform.log.debug('Sending converted/rounded temperature: ${convertedValue}');
