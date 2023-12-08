@@ -60,7 +60,7 @@ export class RinnaiControlrPlatformAccessory {
             : this.device.info.m02_outlet_temperature;
 
         this.platform.log.debug(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
-            `target temperature: ${this.targetTemperature}` +
+            `target temperature: ${this.targetTemperature}, ` +
             `outlet temperature: ${this.outletTemperature}`);
 
         // set accessory information
@@ -150,7 +150,7 @@ export class RinnaiControlrPlatformAccessory {
             ? Math.round(celsiusToFahrenheit(value as number) / WATER_HEATER_STEP_VALUE_IN_F) * WATER_HEATER_STEP_VALUE_IN_F
             : value as number;
 
-        this.platform.log.debug('Sending converted/rounded temperature: ${convertedValue}');
+        this.platform.log.debug(`Sending converted/rounded temperature: ${convertedValue}`);
 
         const state: Record<string, string | number | boolean> = {
             [API_KEY_SET_PRIORITY_STATUS]: true,
