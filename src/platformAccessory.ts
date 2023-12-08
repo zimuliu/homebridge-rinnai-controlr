@@ -30,6 +30,7 @@ export class RinnaiControlrPlatformAccessory {
     private readonly maxValue: number; // in C
     private targetTemperature: number; // in C
     private outletTemperature: number; // in C
+    private isRunning: boolean;
 
     constructor(
         private readonly platform: RinnaiControlrHomebridgePlatform,
@@ -59,9 +60,12 @@ export class RinnaiControlrPlatformAccessory {
             ? fahrenheitToCelsius(this.device.info.m02_outlet_temperature)
             : this.device.info.m02_outlet_temperature;
 
+        this.isRunning = this.device.info?.domestic_combustion == 'true';
+
         this.platform.log.debug(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
             `target temperature: ${this.targetTemperature}, ` +
-            `outlet temperature: ${this.outletTemperature}`);
+            `outlet temperature: ${this.outletTemperature}, ` +
+            `is running: ${this.isRunning}`);
 
         // set accessory information
         this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -104,6 +108,15 @@ export class RinnaiControlrPlatformAccessory {
                 minValue: this.platform.Characteristic.TargetHeatingCoolingState.HEAT,
                 maxValue: this.platform.Characteristic.TargetHeatingCoolingState.HEAT,
                 validValues: [this.platform.Characteristic.TargetHeatingCoolingState.HEAT],
+            });
+
+        this.service.getCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState)
+            .onGet(this.getIsRunning.bind(this))
+            .updateValue(this.isRunning ? this.platform.Characteristic.CurrentHeatingCoolingState.HEAT : this.platform.Characteristic.CurrentHeatingCoolingState.OFF)
+            .setProps({
+                minValue: this.platform.Characteristic.CurrentHeatingCoolingState.OFF,
+                maxValue: this.platform.Characteristic.CurrentHeatingCoolingState.HEAT,
+                validValues: [this.platform.Characteristic.CurrentHeatingCoolingState.OFF, this.platform.Characteristic.CurrentHeatingCoolingState.HEAT],
             });
     }
 
@@ -172,5 +185,10 @@ export class RinnaiControlrPlatformAccessory {
     async getOutletTemperature(): Promise<Nullable<CharacteristicValue>> {
         this.platform.throttledPoll();
         return this.outletTemperature;
+    }
+
+    async getIsRunning(): Promise<Nullable<CharacteristicValue>> {
+        this.platform.throttledPoll();
+        return this.isRunning;
     }
 }
