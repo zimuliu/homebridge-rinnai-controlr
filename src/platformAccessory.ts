@@ -47,6 +47,9 @@ export class RinnaiControlrPlatformAccessory {
             this.maxValue = fahrenheitToCelsius(this.maxValue);
         }
 
+        this.minValue = Math.floor(this.minValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
+        this.maxValue = Math.ceil(this.maxValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
+
         this.temperature = this.isFahrenheit && this.device.info?.domestic_temperature
             ? fahrenheitToCelsius(this.device.info.domestic_temperature)
             : this.device.info.domestic_temperature;
