@@ -62,7 +62,7 @@ export class RinnaiControlrPlatformAccessory {
 
         this.isRunning = this.device.info?.domestic_combustion == 'true';
 
-        this.platform.log.debug(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
+        this.platform.log.info(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
             `target temperature: ${this.targetTemperature}, ` +
             `outlet temperature: ${this.outletTemperature}, ` +
             `is running: ${this.isRunning}`);
@@ -139,8 +139,6 @@ export class RinnaiControlrPlatformAccessory {
             this.platform.getConfig().temperatureUnits === TemperatureUnits.F
                 ? this.platform.Characteristic.TemperatureDisplayUnits.FAHRENHEIT
                 : this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS);
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState,
-            this.platform.Characteristic.CurrentHeatingCoolingState.HEAT);
     }
 
     async setRecirculateActive(value: CharacteristicValue) {
