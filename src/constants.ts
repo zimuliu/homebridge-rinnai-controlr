@@ -277,5 +277,5 @@ export const THERMOSTAT_STEP_VALUE = 0.5; // in C, as HomeKit uses this unit for
 export const WATER_HEATER_STEP_VALUE_IN_F = 2; // Controllers with the imperial unit, use 98/100/102/etc
 
 // Increment only for breaking service changes to remove and re-add devices
-export const PREVIOUS_UUID_SUFFICES = [''];
-export const UUID_SUFFIX = '-1';
+export const PREVIOUS_UUID_SUFFICES = ['-1'];
+export const UUID_SUFFIX = '-2';

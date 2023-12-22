@@ -78,7 +78,7 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
     configureAccessory(accessory: PlatformAccessory) {
         this.log.debug('Loading accessory from cache:', accessory.displayName);
         if (this.removeBrokenAccessories(accessory.context)) {
-            this.log.warn('');
+            this.log.warn('Removed accessory:', accessory.displayName);
         } else {
             this.accessories.push(accessory);
         }
@@ -169,10 +169,12 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
                 this.log.debug(`Found ${devices.length} Rinnai devices.`);
                 // loop over the discovered devices and register each one if it has not already been registered
                 for (const device of devices) {
+                    this.log.debug(`Processing device: ${JSON.stringify(device.id, null, 2)}`);
+
                     this.removeBrokenAccessories(device);
 
-                    this.log.debug(`Generating UUID from DSN ${device.dsn}`);
-                    const uuid = this.api.hap.uuid.generate(`${device.dsn}${UUID_SUFFIX}`);
+                    this.log.debug(`Generating UUID from S/N ${device.id}`);
+                    const uuid = this.generateAccessoryUuid(device, UUID_SUFFIX);
 
                     // see if an accessory with the same uuid has already been registered and restored from
                     // the cached devices we stored in the `configureAccessory` method above
@@ -221,10 +223,22 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
         });
     }
 
+    generateAccessoryUuid(device, uuidSuffix: string): string {
+        switch (uuidSuffix) {
+            case '-1':
+                return this.api.hap.uuid.generate(`${device.dsn}${uuidSuffix}`);
+            case '-2':
+                return this.api.hap.uuid.generate(`${device.id}${uuidSuffix}`);
+        }
+
+        throw new Error('Unknown suffix');
+        return 'bad-uuid';
+    }
+
     removeBrokenAccessories(device): boolean {
         let removed = false;
         PREVIOUS_UUID_SUFFICES.forEach(uuidSuffix => {
-            const oldUuid = this.api.hap.uuid.generate(`${device.dsn}${uuidSuffix}`);
+            const oldUuid = this.generateAccessoryUuid(device, uuidSuffix);
             const oldAccessory = this.accessories.find(accessory => accessory.UUID === oldUuid);
             if (oldAccessory) {
                 this.log.info(`Removing existing accessory from cache because of breaking change: ${oldAccessory.displayName}`);

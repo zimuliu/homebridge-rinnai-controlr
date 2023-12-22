@@ -61,7 +61,7 @@ export class RinnaiControlrPlatformAccessory {
         this.accessory.getService(this.platform.Service.AccessoryInformation)!
             .setCharacteristic(this.platform.Characteristic.Manufacturer, MANUFACTURER)
             .setCharacteristic(this.platform.Characteristic.Model, this.device.model || UNKNOWN)
-            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.dsn || UNKNOWN);
+            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.id || UNKNOWN);
 
         this.service = this.accessory.getService(this.platform.Service.Thermostat)
             || this.accessory.addService(this.platform.Service.Thermostat);
@@ -103,15 +103,15 @@ export class RinnaiControlrPlatformAccessory {
 
     bindRecirculation() {
         if (this.accessory.context.info?.recirculation_capable === API_VALUE_TRUE) {
-            this.platform.log.debug(`Device ${this.device.dsn} has recirculation capabilities. Adding service.`);
+            this.platform.log.debug(`Device ${this.device.id} has recirculation capabilities. Adding service.`);
             const recircService = this.accessory.getService(RECIRC_SERVICE_NAME) ||
-                this.accessory.addService(this.platform.Service.Switch, RECIRC_SERVICE_NAME, `${this.device.dsn}-Recirculation`);
+                this.accessory.addService(this.platform.Service.Switch, RECIRC_SERVICE_NAME, `${this.device.id}-Recirculation`);
             recircService.getCharacteristic(this.platform.Characteristic.On)
                 .onSet(this.setRecirculateActive.bind(this));
             recircService.updateCharacteristic(this.platform.Characteristic.On,
                 this.device.shadow.recirculation_enabled);
         } else {
-            this.platform.log.debug(`Device ${this.device.dsn} does not support recirculation.`);
+            this.platform.log.debug(`Device ${this.device.id} does not support recirculation.`);
         }
     }
 
@@ -127,7 +127,7 @@ export class RinnaiControlrPlatformAccessory {
     async setRecirculateActive(value: CharacteristicValue) {
         const duration = (value as boolean) ? `${this.platform.getConfig().recirculationDuration}`
             : '0';
-        this.platform.log.info(`setRecirculateActive to ${value} for device ${this.device.dsn}`);
+        this.platform.log.info(`setRecirculateActive to ${value} for device ${this.device.id}`);
 
         const state: Record<string, string | boolean> = {
             [API_KEY_SET_PRIORITY_STATUS]: true,
@@ -138,7 +138,7 @@ export class RinnaiControlrPlatformAccessory {
     }
 
     async setTargetTemperature(value: CharacteristicValue) {
-        this.platform.log.info(`setTemperature to ${value} for device ${this.device.dsn}`);
+        this.platform.log.info(`setTemperature to ${value} for device ${this.device.id}`);
 
         const convertedValue: number = this.isFahrenheit
             ? Math.round(celsiusToFahrenheit(value as number) / WATER_HEATER_STEP_VALUE_IN_F) * WATER_HEATER_STEP_VALUE_IN_F
