@@ -110,14 +110,6 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
         }
     }
 
-    throttledPoll() {
-        const throttle = _.throttle(() => {
-            this.pollDeviceStatus();
-        }, API_POLL_THROTTLE_MILLIS);
-
-        throttle();
-    }
-
     getConfig(): RinnaiControlrConfig {
         return this.config as RinnaiControlrConfig;
     }
@@ -227,6 +219,10 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
             this.log.debug('Failed to fetch session', error);
         });
     }
+
+    public throttledPoll = _.throttle(async () => {
+        await this.pollDeviceStatus();
+    }, API_POLL_THROTTLE_MILLIS);
 
     generateAccessoryUuid(device, uuidSuffix: string): string {
         switch (uuidSuffix) {
