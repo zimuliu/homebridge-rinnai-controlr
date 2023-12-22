@@ -266,7 +266,7 @@ export const API_VALUE_FALSE = 'false';
 export const API_POLL_THROTTLE_MILLIS = 1000;
 export const SET_STATE_WAIT_TIME_MILLIS = 5000;
 
-export const ACCESSARY_INFO_UPDATE_THROTTLE_MILLIS = 30000;
+export const MAINTENANCE_RETRIEVAL_THROTTLE_MILLIS = 30000;
 
 export const MANUFACTURER = 'Rinnai';
 export const UNKNOWN = 'Unknown';
