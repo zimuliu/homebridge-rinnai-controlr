@@ -186,10 +186,10 @@ export class RinnaiControlrPlatformAccessory {
     accessoryToControllerTemperature(value: number): number {
         let convertedValue: number = this.isFahrenheit ? celsiusToFahrenheit(value) : value;
         if (this.isFahrenheit) {
-            if (convertedValue >=  WATER_HEATER_BIG_STEP_START_IN_F) {
-                convertedValue = Math.round(celsiusToFahrenheit(convertedValue) / WATER_HEATER_SMALL_STEP_VALUE_IN_F) * WATER_HEATER_SMALL_STEP_VALUE_IN_F
+            if (convertedValue <  WATER_HEATER_BIG_STEP_START_IN_F) {
+                convertedValue = Math.round(convertedValue / WATER_HEATER_SMALL_STEP_VALUE_IN_F) * WATER_HEATER_SMALL_STEP_VALUE_IN_F
             } else {
-                convertedValue = Math.round(celsiusToFahrenheit(convertedValue) / WATER_HEATER_BIG_STEP_VALUE_IN_F) * WATER_HEATER_BIG_STEP_VALUE_IN_F
+                convertedValue = Math.round(convertedValue / WATER_HEATER_BIG_STEP_VALUE_IN_F) * WATER_HEATER_BIG_STEP_VALUE_IN_F
             }
         } else {
             convertedValue = Math.round(convertedValue);
