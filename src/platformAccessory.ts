@@ -179,10 +179,6 @@ export class RinnaiControlrPlatformAccessory {
         await this.platform.setState(this.accessory, state);
     }
 
-    public throttledRetrieveMaintenanceInfo = _.throttle(async () => {
-        await this.retrieveMaintenanceInfo();
-    }, MAINTENANCE_RETRIEVAL_THROTTLE_MILLIS);
-
     accessoryToControllerTemperature(value: number): number {
         let convertedValue: number = this.isFahrenheit ? celsiusToFahrenheit(value) : value;
         if (this.isFahrenheit) {
@@ -222,12 +218,12 @@ export class RinnaiControlrPlatformAccessory {
     }
 
     public throttledPollDeviceInfo = _.throttle(async () => {
-        await this.throttledRetrieveMaintenanceInfo()
+        await this.retrieveMaintenanceInfo();
 
         await this.platform.throttledPoll();
 
         this.extractDeviceInfo();
-    }, SET_STATE_WAIT_TIME_MILLIS);
+    }, MAINTENANCE_RETRIEVAL_THROTTLE_MILLIS);
 
     async getTargetTemperature(): Promise<Nullable<CharacteristicValue>> {
         await this.throttledPollDeviceInfo();
