@@ -56,7 +56,7 @@ export class RinnaiControlrPlatformAccessory {
 
         this.minValue = Math.floor(this.minValue / THERMOSTAT_TARGET_TEMP_STEP_VALUE) * THERMOSTAT_TARGET_TEMP_STEP_VALUE;
         this.maxValue = Math.ceil(this.maxValue / THERMOSTAT_TARGET_TEMP_STEP_VALUE) * THERMOSTAT_TARGET_TEMP_STEP_VALUE;
-        this.platform.log.debug(`Target Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}`);
+        this.platform.log.info(`Water Heater ${this.accessory.context.id}: Target Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}`);
 
         this.extractDeviceInfo();
 
@@ -92,10 +92,10 @@ export class RinnaiControlrPlatformAccessory {
             this.platform.log.error(`Cannot extract details from ${JSON.stringify(this.accessory.context, null, 2)}`);
         }
 
-        this.platform.log.debug(`Extracted device info: ` +
-            `target temperature = ${this.targetTemperature}, ` +
-            `outlet temperature = ${this.outletTemperature}, ` +
-            `is running = ${this.isRunning}`);
+        this.platform.log.info(`Water Heater ${this.accessory.context.id}: ` +
+            `targetTemperature = ${this.targetTemperature}, ` +
+            `outletTemperature = ${this.outletTemperature}, ` +
+            `isRunning = ${this.isRunning}`);
     }
 
     bindTemperature() {
@@ -202,10 +202,10 @@ export class RinnaiControlrPlatformAccessory {
     }
 
     async setTargetTemperature(value: CharacteristicValue) {
-        this.platform.log.info(`setTemperature to ${value} C for device ${this.accessory.context.id}`);
+        this.platform.log.info(`Water Heater ${this.accessory.context.id}: HomeKit sets target temperature to ${value}C`);
 
         const convertedValue = this.accessoryToControllerTemperature(value as number);
-        this.platform.log.info(`Sending converted/rounded temperature: ${convertedValue} ${this.platform.getConfig().temperatureUnits}`);
+        this.platform.log.info(`Water Heater ${this.accessory.context.id}: Sending converted/rounded temperature: ${convertedValue}${this.platform.getConfig().temperatureUnits}`);
 
         const state: Record<string, string | number | boolean> = {
             [API_KEY_SET_PRIORITY_STATUS]: true,
