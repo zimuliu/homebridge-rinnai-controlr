@@ -45,6 +45,7 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
 
     // this is used to track restored cached accessories
     public readonly accessories: PlatformAccessory[] = [];
+    private initializedAccessories: string[] = [];
 
     constructor(
         public readonly log: Logger,
@@ -169,7 +170,7 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
                 this.log.debug(`Found ${devices.length} Rinnai devices.`);
                 // loop over the discovered devices and register each one if it has not already been registered
                 for (const device of devices) {
-                    this.log.debug(`Processing device: ${JSON.stringify(device.id, null, 2)}`);
+                    this.log.debug(`Processing device: ${JSON.stringify(device, null, 2)}`);
 
                     this.removeBrokenAccessories(device);
 
@@ -188,9 +189,12 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
                         accessory.context = device;
                         this.api.updatePlatformAccessories([accessory]);
 
-                        // create the accessory handler for the restored accessory
-                        // this is imported from `platformAccessory.ts`
-                        new RinnaiControlrPlatformAccessory(this, accessory);
+                        if (!this.initializedAccessories.find(accessoryUuid => accessoryUuid === uuid)) {
+                            // create the accessory handler for the restored accessory
+                            // this is imported from `platformAccessory.ts`
+                            new RinnaiControlrPlatformAccessory(this, accessory);
+                            this.initializedAccessories.push(accessory.UUID);
+                        }
                     } else {
                         // the accessory does not yet exist, so we need to create it
                         this.log.debug(`Adding new accessory because ${accessory} was not restored from cache:`, device.device_name);
@@ -210,6 +214,7 @@ export class RinnaiControlrHomebridgePlatform implements DynamicPlatformPlugin {
 
                         // link the accessory to your platform
                         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                        this.initializedAccessories.push(accessory.UUID);
                     }
                 }
 

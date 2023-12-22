@@ -34,10 +34,7 @@ export class RinnaiControlrPlatformAccessory {
         private readonly platform: RinnaiControlrHomebridgePlatform,
         private readonly accessory: PlatformAccessory,
     ) {
-
-        this.device = this.accessory.context;
-
-        this.platform.log.debug(`Setting accessory details for device: ${JSON.stringify(this.device, null, 2)}`);
+        this.platform.log.debug(`Setting accessory details for device: ${JSON.stringify(this.accessory.context, null, 2)}`);
         this.isFahrenheit = this.platform.getConfig().temperatureUnits === TemperatureUnits.F;
 
         this.minValue = this.platform.getConfig().minimumTemperature;
@@ -50,9 +47,9 @@ export class RinnaiControlrPlatformAccessory {
         this.minValue = Math.floor(this.minValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
         this.maxValue = Math.ceil(this.maxValue / THERMOSTAT_STEP_VALUE) * THERMOSTAT_STEP_VALUE;
 
-        this.targetTemperature = this.isFahrenheit && this.device.info?.domestic_temperature
-            ? fahrenheitToCelsius(this.device.info.domestic_temperature)
-            : this.device.info.domestic_temperature;
+        this.targetTemperature = this.isFahrenheit && this.accessory.context.info?.domestic_temperature
+            ? fahrenheitToCelsius(this.accessory.context.info.domestic_temperature)
+            : this.accessory.context.info.domestic_temperature;
 
         this.platform.log.info(`Temperature Slider Min: ${this.minValue}, Max: ${this.maxValue}, ` +
             `target temperature: ${this.targetTemperature}`);
@@ -60,12 +57,12 @@ export class RinnaiControlrPlatformAccessory {
         // set accessory information
         this.accessory.getService(this.platform.Service.AccessoryInformation)!
             .setCharacteristic(this.platform.Characteristic.Manufacturer, MANUFACTURER)
-            .setCharacteristic(this.platform.Characteristic.Model, this.device.model || UNKNOWN)
-            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.id || UNKNOWN);
+            .setCharacteristic(this.platform.Characteristic.Model, this.accessory.context.model || UNKNOWN)
+            .setCharacteristic(this.platform.Characteristic.SerialNumber, this.accessory.context.id || UNKNOWN);
 
         this.service = this.accessory.getService(this.platform.Service.Thermostat)
             || this.accessory.addService(this.platform.Service.Thermostat);
-        this.service.setCharacteristic(this.platform.Characteristic.Name, this.device.device_name);
+        this.service.setCharacteristic(this.platform.Characteristic.Name, this.accessory.context.device_name);
 
         this.bindTemperature();
         this.bindRecirculation();
@@ -103,15 +100,15 @@ export class RinnaiControlrPlatformAccessory {
 
     bindRecirculation() {
         if (this.accessory.context.info?.recirculation_capable === API_VALUE_TRUE) {
-            this.platform.log.debug(`Device ${this.device.id} has recirculation capabilities. Adding service.`);
+            this.platform.log.debug(`Device ${this.accessory.context.id} has recirculation capabilities. Adding service.`);
             const recircService = this.accessory.getService(RECIRC_SERVICE_NAME) ||
-                this.accessory.addService(this.platform.Service.Switch, RECIRC_SERVICE_NAME, `${this.device.id}-Recirculation`);
+                this.accessory.addService(this.platform.Service.Switch, RECIRC_SERVICE_NAME, `${this.accessory.context.id}-Recirculation`);
             recircService.getCharacteristic(this.platform.Characteristic.On)
                 .onSet(this.setRecirculateActive.bind(this));
             recircService.updateCharacteristic(this.platform.Characteristic.On,
-                this.device.shadow.recirculation_enabled);
+                this.accessory.context.shadow.recirculation_enabled);
         } else {
-            this.platform.log.debug(`Device ${this.device.id} does not support recirculation.`);
+            this.platform.log.debug(`Device ${this.accessory.context.id} does not support recirculation.`);
         }
     }
 
@@ -127,7 +124,7 @@ export class RinnaiControlrPlatformAccessory {
     async setRecirculateActive(value: CharacteristicValue) {
         const duration = (value as boolean) ? `${this.platform.getConfig().recirculationDuration}`
             : '0';
-        this.platform.log.info(`setRecirculateActive to ${value} for device ${this.device.id}`);
+        this.platform.log.info(`setRecirculateActive to ${value} for device ${this.accessory.context.id}`);
 
         const state: Record<string, string | boolean> = {
             [API_KEY_SET_PRIORITY_STATUS]: true,
@@ -138,7 +135,7 @@ export class RinnaiControlrPlatformAccessory {
     }
 
     async setTargetTemperature(value: CharacteristicValue) {
-        this.platform.log.info(`setTemperature to ${value} for device ${this.device.id}`);
+        this.platform.log.info(`setTemperature to ${value} for device ${this.accessory.context.id}`);
 
         const convertedValue: number = this.isFahrenheit
             ? Math.round(celsiusToFahrenheit(value as number) / WATER_HEATER_STEP_VALUE_IN_F) * WATER_HEATER_STEP_VALUE_IN_F
