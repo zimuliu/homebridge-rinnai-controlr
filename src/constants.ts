@@ -263,11 +263,11 @@ export const API_KEY_DO_MAINTENANCE_RETRIEVAL = 'do_maintenance_retrieval';
 export const API_VALUE_TRUE = 'true';
 export const API_VALUE_FALSE = 'false';
 
-export const API_POLL_THROTTLE_MILLIS = 1000;
+export const API_POLL_THROTTLE_MILLIS = 30000;
 export const SET_STATE_WAIT_TIME_MILLIS = 5000;
 
 export const MAINTENANCE_RETRIEVAL_RUNNING_THROTTLE_MILLIS = 30000; // 30 secs when heater is running
-export const MAINTENANCE_RETRIEVAL_IDLE_THROTTLE_MILLIS = 300000; // 5 mins when heater is idling
+export const MAINTENANCE_RETRIEVAL_IDLING_THROTTLE_MILLIS = 600000; // 10 mins when heater is idling
 
 export const MANUFACTURER = 'Rinnai';
 export const UNKNOWN = 'Unknown';

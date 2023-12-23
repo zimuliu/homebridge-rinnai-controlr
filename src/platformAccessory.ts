@@ -14,7 +14,7 @@ import {
     THERMOSTAT_CURRENT_TEMP_MAX_VALUE,
     THERMOSTAT_CURRENT_TEMP_MIN_VALUE,
     UNKNOWN,
-    MAINTENANCE_RETRIEVAL_IDLE_THROTTLE_MILLIS,
+    MAINTENANCE_RETRIEVAL_IDLING_THROTTLE_MILLIS,
     MAINTENANCE_RETRIEVAL_RUNNING_THROTTLE_MILLIS,
     API_VALUE_FALSE,
     THERMOSTAT_CURRENT_TEMP_STEP_VALUE,
@@ -93,7 +93,7 @@ export class RinnaiControlrPlatformAccessory {
             this.platform.log.error(`Cannot extract details from ${JSON.stringify(this.accessory.context, null, 2)}`);
         }
 
-        this.platform.log.info(`Water Heater ${this.accessory.context.id}: ` +
+        this.platform.log.debug(`Water Heater ${this.accessory.context.id}: ` +
             `targetTemperature = ${this.targetTemperature}, ` +
             `outletTemperature = ${this.outletTemperature}, ` +
             `isRunning = ${this.isRunning}`);
@@ -229,7 +229,7 @@ export class RinnaiControlrPlatformAccessory {
         this.extractDeviceInfo();
     }
 
-    public pollMaintenanceInfoWhenIdling = _.throttle(this.pollMaintenanceInfo, MAINTENANCE_RETRIEVAL_IDLE_THROTTLE_MILLIS);
+    public pollMaintenanceInfoWhenIdling = _.throttle(this.pollMaintenanceInfo, MAINTENANCE_RETRIEVAL_IDLING_THROTTLE_MILLIS);
     public pollMaintenanceInfoWhenRunning = _.throttle(this.pollMaintenanceInfo, MAINTENANCE_RETRIEVAL_RUNNING_THROTTLE_MILLIS);
 
     async getTargetTemperature(): Promise<Nullable<CharacteristicValue>> {
