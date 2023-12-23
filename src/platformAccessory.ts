@@ -14,7 +14,8 @@ import {
     THERMOSTAT_CURRENT_TEMP_MAX_VALUE,
     THERMOSTAT_CURRENT_TEMP_MIN_VALUE,
     UNKNOWN,
-    MAINTENANCE_RETRIEVAL_THROTTLE_MILLIS,
+    MAINTENANCE_RETRIEVAL_IDLE_THROTTLE_MILLIS,
+    MAINTENANCE_RETRIEVAL_RUNNING_THROTTLE_MILLIS,
     API_VALUE_FALSE,
     THERMOSTAT_CURRENT_TEMP_STEP_VALUE,
     WATER_HEATER_BIG_STEP_START_IN_F,
@@ -217,29 +218,36 @@ export class RinnaiControlrPlatformAccessory {
         this.targetTemperature = this.isFahrenheit ? fahrenheitToCelsius(convertedValue) : convertedValue;
     }
 
-    public throttledPollDeviceInfo = _.throttle(async () => {
-        await this.retrieveMaintenanceInfo();
-
+    async pollBasicInfo() {
         await this.platform.throttledPoll();
-
         this.extractDeviceInfo();
-    }, MAINTENANCE_RETRIEVAL_THROTTLE_MILLIS);
+    }
+
+    async pollMaintenanceInfo() {
+        await this.retrieveMaintenanceInfo();
+        await this.platform.throttledPoll();
+        this.extractDeviceInfo();
+    }
+
+    public pollMaintenanceInfoWhenIdling = _.throttle(this.pollMaintenanceInfo, MAINTENANCE_RETRIEVAL_IDLE_THROTTLE_MILLIS);
+    public pollMaintenanceInfoWhenRunning = _.throttle(this.pollMaintenanceInfo, MAINTENANCE_RETRIEVAL_RUNNING_THROTTLE_MILLIS);
 
     async getTargetTemperature(): Promise<Nullable<CharacteristicValue>> {
-        await this.throttledPollDeviceInfo();
-
+        await this.pollBasicInfo();
         return this.targetTemperature;
     }
 
     async getOutletTemperature(): Promise<Nullable<CharacteristicValue>> {
-        await this.throttledPollDeviceInfo();
-
+        if (this.isRunning) {
+            await this.pollMaintenanceInfoWhenRunning();
+        } else {
+            await this.pollMaintenanceInfoWhenIdling();
+        }
         return this.outletTemperature;
     }
 
     async getIsRunning(): Promise<Nullable<CharacteristicValue>> {
-        await this.throttledPollDeviceInfo();
-
+        await this.pollBasicInfo();
         return this.isRunning;
     }
 }
